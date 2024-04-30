@@ -5,6 +5,7 @@ __version__ = "0.1.2"
 import os
 import re
 import scipy
+import scipy.signal
 
 
 def get_terminal_width():
@@ -22,7 +23,7 @@ def text(text, bold=False, length=None):
 
 
 def resample(values, length):
-    return scipy.signal.resample(values, length)
+    return scipy.signal.resample_poly(values, length, len(values))
 
 
 boxes = "▁▂▃▄▅▆▇█"
@@ -36,7 +37,7 @@ def sparklines(values, num_lines=2):
     mn = 0
     segment_per_box = (mx - mn) / (num_lines * len(boxes))
     if segment_per_box == 0:
-        return [''] * num_lines
+        return ["_" * len(values)] * num_lines
     lines = []
     for i in range(num_lines - 1, -1, -1):
         line = ""
@@ -55,8 +56,7 @@ def sparklines(values, num_lines=2):
 
 def plot(values, height=4, title=None, length=None):
     length = target_length(length)
-    if length < len(values):
-        values = resample(values, length)
+    values = resample(values, length)
     lines = sparklines(values, num_lines=height)
     if title:
         return text(title, bold=True, length=length) + lines
