@@ -15,10 +15,6 @@ def text(text, bold=False, length=None):
 
 def resample(values, length):
     return scipy.signal.resample(values, length)
-    # output = []
-    # for i in range(length):
-    #     output.append(values[int(i / length * len(values))])
-    # return output
 
 boxes = "▁▂▃▄▅▆▇█"
 def sparklines(values, num_lines: int=2) -> list[str]:
@@ -36,7 +32,10 @@ def sparklines(values, num_lines: int=2) -> list[str]:
             if value < 0:
                 line += ' '
             else:
-                line += boxes[min(len(boxes) - 1, int(value / segment_per_box))]
+                box_index = int(value / segment_per_box)
+                # clamp to top box if we're just providing something for a higher box to sit on
+                box_index = min(len(boxes) - 1, box_index)
+                line += boxes[box_index]
         lines.append(line)
     return lines
 
@@ -62,7 +61,7 @@ def progress(step, total, length=None):
     text = f"{step}/{total}"
     length = target_length(length)  - len(text) - 2
     filled_parts = int(step / total * length)
-    bar = '▊' * filled_parts + '▕' * (length - filled_parts)
+    bar = '▊' * (filled_parts - 1) + '█' + '▕' * (length - filled_parts)
     return [f"{bar} {step}/{total}"]
 
 def split(template):
@@ -121,8 +120,6 @@ def render_template(template, args):
 
         rendered_lines.extend(lines)
     return rendered_lines
-            
-
 
 class TextBoard:
     def __init__(self, template):
