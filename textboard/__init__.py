@@ -1,6 +1,6 @@
 """A thing to make text-based training loggers"""
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import os
 import re
@@ -28,7 +28,7 @@ def resample(values, length):
 boxes = "▁▂▃▄▅▆▇█"
 
 
-def sparklines(values, num_lines: int = 2) -> list[str]:
+def sparklines(values, num_lines=2):
     # shift values to be positive
     mn = min(values)
     values = [v - mn for v in values]
@@ -51,7 +51,7 @@ def sparklines(values, num_lines: int = 2) -> list[str]:
     return lines
 
 
-def plot(values, height: int = 4, title=None, length=None) -> list[str]:
+def plot(values, height=4, title=None, length=None):
     length = target_length(length)
     if length < len(values):
         values = resample(values, length)
@@ -61,7 +61,7 @@ def plot(values, height: int = 4, title=None, length=None) -> list[str]:
     return lines
 
 
-def hist1d(values, height, labels=None, title=None, length=None) -> list[str]:
+def hist1d(values, height, labels=None, title=None, length=None):
     length = target_length(length)
     lines = sparklines(values, num_lines=height)
     if title:
