@@ -32,24 +32,25 @@ then pass it things in your training loop and call print:
 
 ```python
 args = {
-'loss': 0,
-'score': 0,
-'probs': 0,
-'letters': string.ascii_lowercase,
-'step': 0,
-'total': len(data)
+    'loss': loss,
+    'score': score,
+    'probs': probs,
+    'letters': string.ascii_lowercase,
+    'step': 0,
+    'total': 100
 }
 
 board = TextBoard(template)
-for i, d in enumerate(data):
-    stuff = step(model, data)
-    these_args = {}
-    if i % 100 == 0:
-        these_args['loss'] = stuff['loss'].detach()
-        these_args['score'] = stuff['loss'].detach()
-        these_args['probs'] = stuff['loss'].detach()
+board.print(args)
+for i, el in data:
+    rez = model(el)
+    if i % 3 == 0:
+        these_args['loss'] = rez['loss']
+        these_args['score'] = rez['score']
+        these_args['probs'] = rez['probs']
     these_args['step'] = i
     board.print(these_args)
+    time.sleep(0.5)
 ```
 
 and it will using the magic of eval it will print stuff like
