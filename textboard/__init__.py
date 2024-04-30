@@ -51,8 +51,6 @@ def plot(values, height: int=4, title=None, length=None) -> list[str]:
 
 def hist1d(values, height, labels=None, title=None, length=None) -> list[str]:
     length = target_length(length)
-    if length < len(values):
-        raise ValueError("Length must be at least as long as the values")
     lines = sparklines(values, num_lines=height)
     if title:
         lines = text(title, bold=True) + lines
