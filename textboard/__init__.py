@@ -1,6 +1,6 @@
 """A thing to make text-based training loggers"""
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 import os
 import re
@@ -28,19 +28,38 @@ def resample(values, length):
 
 boxes = "▁▂▃▄▅▆▇█"
 
+def format_scientific(n):
+    """
+    Format a number using scientific notation with one significant figure
+    if it would be shorter than printing the number itself.
+    """
+    if n == 0:
+        return "0"
+    elif abs(n) < 1e-3 or abs(n) > 1e3:
+        return "{:.0e}".format(n)
+    else:
+        return '{:.1f}'.format(n)
 
-def sparklines(values, num_lines=2):
-    # shift values to be positive
+
+def sparklines(values, num_lines=2, show_vals=False):
     mn = min(values)
+
+    mn_txt = format_scientific(mn)
+    mx_txt = format_scientific(max(values))
+    
+    # shift values to be positive
     values = [v - mn for v in values]
     mx = max(values)
+    val_offset = max(len(mn_txt), len(mx_txt))
     mn = 0
     segment_per_box = (mx - mn) / (num_lines * len(boxes))
+    if show_vals:
+        values = resample(values, len(values) - val_offset - 1)
     if segment_per_box == 0:
         return ["_" * len(values)] * num_lines
     lines = []
     for i in range(num_lines - 1, -1, -1):
-        line = ""
+        line = ''
         for v in values:
             value = v - i * segment_per_box * len(boxes)
             if value < 0:
@@ -50,14 +69,21 @@ def sparklines(values, num_lines=2):
                 # clamp to top box if we're just providing something for a higher box to sit on
                 box_index = min(len(boxes) - 1, box_index)
                 line += boxes[box_index]
+        if show_vals:
+            if i == num_lines - 1:
+                line += mx_txt + " " * (val_offset - len(mx_txt)) + " "
+            elif i == 0:
+                line += mn_txt + " " * (val_offset - len(mn_txt)) + " "
+            else:
+                line += " " * val_offset + " "
         lines.append(line)
     return lines
 
 
-def plot(values, height=4, title=None, length=None):
+def plot(values, height=4, title=None, length=None, show_vals=False):
     length = target_length(length)
     values = resample(values, length)
-    lines = sparklines(values, num_lines=height)
+    lines = sparklines(values, num_lines=height, show_vals=show_vals)
     if title:
         return text(title, bold=True, length=length) + lines
     return lines
