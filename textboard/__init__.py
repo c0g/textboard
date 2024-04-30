@@ -1,5 +1,6 @@
 import os
 import re
+import scipy
 
 def get_terminal_width():
     return os.get_terminal_size().columns
@@ -13,10 +14,11 @@ def text(text, bold=False, length=None):
     return [text]
 
 def resample(values, length):
-    output = []
-    for i in range(length):
-        output.append(values[int(i / length * len(values))])
-    return output
+    return scipy.signal.resample(values, length)
+    # output = []
+    # for i in range(length):
+    #     output.append(values[int(i / length * len(values))])
+    # return output
 
 boxes = "▁▂▃▄▅▆▇█"
 def sparklines(values, num_lines: int=2) -> list[str]:
@@ -144,44 +146,46 @@ class TextBoard:
         self.did_render_once = True
         self.last_length = len(lines)
 
-# import string
-# if __name__ == "__main__":
-#     import torch
-#     import time
-#     template = """plot(loss, title="Loss", height=2) plot(score, title="Score", height=2)
+
+if __name__ == "__main__":
+    import numpy as np
+    import torch
+    import time
+    import string
+    template = """plot(loss, title="Loss", height=2) plot(score, title="Score", height=2)
 
 
-#     text("Next letter probabilities", bold=True)
-#     hist1d(probs[0], height=2, labels=letters) hist1d(probs[1], height=2, labels=letters) hist1d(probs[3], height=2, labels=letters)
-#     hist1d(probs[3], height=2, labels=letters) hist1d(probs[4], height=2, labels=letters) hist1d(probs[5], height=2, labels=letters)
+    text("Next letter probabilities", bold=True)
+    hist1d(probs[0], height=2, labels=letters) hist1d(probs[1], height=2, labels=letters) hist1d(probs[3], height=2, labels=letters)
+    hist1d(probs[3], height=2, labels=letters) hist1d(probs[4], height=2, labels=letters) hist1d(probs[5], height=2, labels=letters)
 
-#     text("Progress", bold=True)
-#     progress(step, total)"""
+    text("Progress", bold=True)
+    progress(step, total)"""
 
-#     letters = 'abcdefghijklmnopqrstuvwxyz'
-#     loss = torch.sin(torch.linspace(0, 2 * 3.14, 100)).numpy()
-#     score = torch.sin(torch.linspace(0, 2 * 3.14, 100)).numpy()
-#     logits = torch.randn(6, 26)
-#     probs = torch.softmax(logits, dim=-1).numpy()
-#     step = 10
-#     total = 100
+    letters = 'abcdefghijklmnopqrstuvwxyz'
+    loss = torch.sin(torch.linspace(0, 2 * 3.14, 100)).numpy()
+    score = torch.cos(torch.linspace(0, 2 * 3.14, 100)).numpy()
+    logits = torch.randn(6, 26)
+    probs = torch.softmax(logits, dim=-1).numpy()
+    step = 10
+    total = 100
 
-#     args = {
-#     'loss': 0,
-#     'score': 0,
-#     'probs': 0,
-#     'letters': string.ascii_lowercase,
-#     'step': 0,
-#     'total': len(data)
-#     }
+    args = {
+    'loss': 0,
+    'score': 0,
+    'probs': 0,
+    'letters': string.ascii_lowercase,
+    'step': 0,
+    'total': 100
+    }
     
-#     board = TextBoard(template)
-#     for i, d in enumerate(data):
-#         # stuff = step(model, data)
-#         these_args = {}
-#         if i % 100 == 0:
-#             these_args['loss'] = stuff['loss'].detach()
-#             these_args['score'] = stuff['loss'].detach()
-#             these_args['probs'] = stuff['loss'].detach()
-#         these_args['step'] = i
-#         board.print(these_args)
+    board = TextBoard(template)
+    for i in range(0, 100):
+        these_args = {}
+        if i % 3 == 0:
+            these_args['loss'] = torch.sin(i + torch.linspace(0, 2 * 3.14, 100)).numpy()
+            these_args['score'] = torch.cos(i + torch.linspace(0, 2 * 3.14, 100)).numpy()
+            these_args['probs'] = torch.softmax(torch.randn(6, 26), dim=-1).numpy()
+        these_args['step'] = i
+        board.print(these_args)
+        time.sleep(0.5)
