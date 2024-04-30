@@ -29,14 +29,14 @@ boxes = "▁▂▃▄▅▆▇█"
 
 
 def sparklines(values, num_lines=2):
-    if len(values) < 2:
-        return [''] * num_lines
     # shift values to be positive
     mn = min(values)
     values = [v - mn for v in values]
     mx = max(values)
     mn = 0
     segment_per_box = (mx - mn) / (num_lines * len(boxes))
+    if segment_per_box == 0:
+        return [''] * num_lines
     lines = []
     for i in range(num_lines - 1, -1, -1):
         line = ""
