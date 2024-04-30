@@ -1,3 +1,7 @@
+"""A thing to make text-based training loggers"""
+
+__version__ = "0.1.0"
+
 import os
 import re
 import scipy
