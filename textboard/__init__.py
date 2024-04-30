@@ -1,6 +1,6 @@
 """A thing to make text-based training loggers"""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 import os
 import re
@@ -29,6 +29,8 @@ boxes = "▁▂▃▄▅▆▇█"
 
 
 def sparklines(values, num_lines=2):
+    if len(values) < 2:
+        return [''] * num_lines
     # shift values to be positive
     mn = min(values)
     values = [v - mn for v in values]
