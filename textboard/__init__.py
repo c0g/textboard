@@ -2,13 +2,18 @@
 
 __version__ = "0.1.3"
 
+import ast
 import os
 import re
+import numpy as np
 import scipy
+import scipy.interpolate
 import scipy.signal
 
 
 def get_terminal_width():
+    if "COLUMNS" in os.environ:
+        return int(os.environ["COLUMNS"])
     return os.get_terminal_size().columns
 
 
@@ -16,15 +21,21 @@ def target_length(length):
     return min(length or get_terminal_width(), get_terminal_width())
 
 
+def _bold(text):
+    return f"\x1b[1m{text}\x1b[0m"
+
 def text(text, bold=False, length=None):
     if bold:
-        return [f"\x1b[1m{text}\x1b[0m"]
+        return [_bold(text)]
     return [text]
 
 
 def resample(values, length):
-    return scipy.signal.resample_poly(values, length, len(values))
-
+    x = np.arange(len(values))
+    return np.interp(np.linspace(0, len(values) - 1, length), x, values).tolist()
+    # f = scipy.interpolate.interp1d(x, values, kind='linear')
+    # new_x = np.linspace(0, len(values)-1, length, endpoint=False)
+    # return f(new_x).tolist()
 
 boxes = "▁▂▃▄▅▆▇█"
 
@@ -80,18 +91,24 @@ def sparklines(values, num_lines=2, show_vals=False):
     return lines
 
 
-def plot(values, height=4, title=None, length=None, show_vals=False):
+def plot(values=None, height=4, title=None, length=None, show_vals=False):
     length = target_length(length)
-    values = resample(values, length)
-    lines = sparklines(values, num_lines=height, show_vals=show_vals)
+    if values is None:
+        lines = [" " * length] * height
+    else:
+        values = resample(values, length)
+        lines = sparklines(values, num_lines=height, show_vals=show_vals)
     if title:
         return text(title, bold=True, length=length) + lines
     return lines
 
 
-def hist1d(values, height, labels=None, title=None, length=None):
+def hist1d(values=None, height=4, labels=None, title=None, length=None):
     length = target_length(length)
-    lines = sparklines(values, num_lines=height)
+    if values is None:
+        lines = [" " * length] * height
+    else:
+        lines = sparklines(values, num_lines=height)
     if title:
         lines = text(title, bold=True) + lines
     if labels:
@@ -99,12 +116,42 @@ def hist1d(values, height, labels=None, title=None, length=None):
     return lines
 
 
-def progress(step, total, length=None):
+def progress(step, total=None, length=None, choo_choo=False, bold=False):
+    if step is None:
+        step = "?"
+    if total is None:
+        total = "?"
     text = f"{step}/{total}"
-    length = target_length(length) - len(text) - 2
-    filled_parts = int(step / total * length)
-    bar = "▊" * (filled_parts - 1) + "█" + "▕" * (length - filled_parts)
-    return [f"{bar} {step}/{total}"]
+    train = [r"____        ",
+             r"|DD|____T_  ",
+             r"|_ |______|<",
+             r"@-@-@---oo\ "]
+    if choo_choo:
+        length = target_length(length) - len(text)
+        bar_length = int(step / total * length)
+        lines = []
+        for i in range(4):
+            if bar_length == 0:
+                train_part = ''
+            else:
+                train_part = train[i][-bar_length:]
+            if len(train_part) < bar_length:
+                train_part = " " * (bar_length - len(train_part)) + train_part
+            if i < 3:
+                train_part += " " * (length - len(train_part)) + " " * len(text)
+            else:
+                train_part += " " * (length - len(train_part)) + text
+            lines.append(train_part)
+        if bold:
+            return [_bold(l) for l in lines]
+        return lines
+    else:
+        length = target_length(length) - len(text)
+        filled_parts = int(step / total * length)
+        bar = "▊" * (filled_parts - 1) + "█" + "▕" * (length - filled_parts)
+        if bold:
+            return [_bold(f"{bar} {step}/{total}")]
+        return [f"{bar} {step}/{total}"]
 
 
 def split(template):
@@ -132,8 +179,13 @@ def render_template(template, args):
         lines = []
         target_length = terminal_width // len(part)
         for func_call in part:
+            tree = ast.parse(func_call)
+            call = tree.body[0].value
+            no_val_args = [arg.id for arg in call.args if isinstance(arg, ast.Name) and arg.id not in args]
+            local_args = args.copy()
+            local_args.update({a: None for a in no_val_args})
             func_call = func_call.rstrip(")") + f", length={target_length})"
-            lines.append(eval(func_call, globals(), args))
+            lines.append(eval(func_call, globals(), local_args))
         lines = list(map(list, zip(*lines)))
 
         # Check if horizontally stacked blocks are actually too long
@@ -174,12 +226,32 @@ class TextBoard:
         self.args = {}
         self.did_render_once = False
 
-    def print(self, args, extra_lines=[], cleanup_previous=True):
+    def render(self, args, extra_lines=[]):
+        self.args.update(args)
+        return render_template(self.template, self.args) + extra_lines
+    
+    def append(self, key,  value):
+        self.args.setdefault(key, []).append(value)
+
+    def set(self, key, value):
+        self.args[key] = value
+
+    def wrap(self, iterable):
+        if isinstance(iterable, range):
+            total = (iterable.stop - iterable.start) / iterable.step
+        elif hasattr(iterable, "__len__"):
+            total = len(iterable)
+        else:
+            total = None
+        for i, item in enumerate(iterable):
+            self.print({'step': i, 'total': total})
+            yield item
+
+    def print(self, args={}, extra_lines=[], cleanup_previous=True):
         if self.did_render_once and cleanup_previous:
             for _ in range(self.last_length):
                 print("\033[F\033[K", end="")
-        self.args.update(args)
-        lines = render_template(self.template, self.args)
+        lines = self.render(args, extra_lines)
         for line in lines + extra_lines:
             print(" ".join(line))
         self.did_render_once = True
